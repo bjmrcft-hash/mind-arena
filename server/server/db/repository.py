@@ -73,8 +73,10 @@ class DebateRepository:
 
         if sort == "oldest":
             query += " ORDER BY created_at ASC"
-        elif sort == "status":
-            query += " ORDER BY status, created_at DESC"
+        elif sort == "name_asc":
+            query += " ORDER BY topic ASC"
+        elif sort == "name_desc":
+            query += " ORDER BY topic DESC"
         else:  # newest
             query += " ORDER BY created_at DESC"
 
