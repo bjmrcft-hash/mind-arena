@@ -213,7 +213,7 @@ class DebateEngine:
             # Create a temporary LLMService with the provider's client
             tmp_llm = LLMService()
             tmp_llm._default_client = client
-            status = await check_model_health(tmp_llm, model_id, timeout=20)
+            status = await check_model_health(tmp_llm, model_id, timeout=60)
             result.models[role] = status
             if not status.available:
                 result.all_ok = False

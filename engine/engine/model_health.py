@@ -75,7 +75,7 @@ def _detect_provider(model_id: str) -> str:
 async def check_model_health(
     llm: LLMService,
     model_id: str,
-    timeout: float = 30.0,
+    timeout: float = 60.0,
     provider: str | None = None,
 ) -> ModelStatus:
     """Test a single model with a minimal request."""
