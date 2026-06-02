@@ -15,11 +15,21 @@ export async function createDebate(
   return r.json();
 }
 
-export async function listDebates(): Promise<DebateSession[]> {
-  const r = await fetch(`${BASE}/debates`);
+export async function listDebates(
+  search: string = '',
+  sort: string = 'newest',
+  limit: number = 50,
+): Promise<DebateSession[]> {
+  const params = new URLSearchParams({ limit: String(limit), search, sort });
+  const r = await fetch(`${BASE}/debates?${params}`);
   if (!r.ok) throw new Error(`List failed: ${r.status}`);
   const data = await r.json();
   return data.debates ?? data;
+}
+
+export async function deleteDebate(id: string): Promise<void> {
+  const r = await fetch(`${BASE}/debates/${id}`, { method: 'DELETE' });
+  if (!r.ok) throw new Error(`Delete failed: ${r.status}`);
 }
 
 export async function getDebate(id: string): Promise<{

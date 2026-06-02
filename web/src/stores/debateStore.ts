@@ -13,12 +13,17 @@ interface DebateState {
 
   // History
   history: DebateSession[];
+  searchQuery: string;
+  sortOrder: string;
 
   // Actions
   healthCheck: () => Promise<Record<string, unknown>>;
   createDebate: (topic: string, mode: string) => Promise<string>;
   loadDebate: (id: string) => Promise<void>;
   loadHistory: () => Promise<void>;
+  deleteDebate: (id: string) => Promise<void>;
+  setSearchQuery: (q: string) => void;
+  setSortOrder: (sort: string) => void;
   handleEvent: (event: DebateEvent) => void;
   pause: () => Promise<void>;
   resume: () => Promise<void>;
@@ -36,6 +41,8 @@ export const useDebateStore = create<DebateState>((set, get) => ({
   streamingContent: '',
 
   history: [],
+  searchQuery: '',
+  sortOrder: 'newest',
 
   healthCheck: async () => {
     const r = await fetch('/api/models/health');
@@ -70,8 +77,29 @@ export const useDebateStore = create<DebateState>((set, get) => ({
   },
 
   loadHistory: async () => {
-    const sessions = await api.listDebates();
+    const { searchQuery, sortOrder } = get();
+    const sessions = await api.listDebates(searchQuery, sortOrder);
     set({ history: sessions });
+  },
+
+  deleteDebate: async (id) => {
+    await api.deleteDebate(id);
+    const { history, session } = get();
+    set({
+      history: history.filter((s) => s.id !== id),
+      session: session?.id === id ? null : session,
+      messages: session?.id === id ? [] : get().messages,
+    });
+  },
+
+  setSearchQuery: (q) => {
+    set({ searchQuery: q });
+    get().loadHistory();
+  },
+
+  setSortOrder: (sort) => {
+    set({ sortOrder: sort });
+    get().loadHistory();
   },
 
   handleEvent: (event) => {

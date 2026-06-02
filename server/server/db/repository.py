@@ -61,14 +61,52 @@ class DebateRepository:
         return dict(row) if row else None
 
     async def list_sessions(
-        self, limit: int = 20, offset: int = 0
+        self, limit: int = 20, offset: int = 0, search: str = "", sort: str = "newest"
     ) -> list[dict]:
-        cursor = await self.db.execute(
-            "SELECT * FROM debate_sessions ORDER BY created_at DESC LIMIT ? OFFSET ?",
-            (limit, offset),
-        )
+        """List sessions with optional search and sort."""
+        query = "SELECT * FROM debate_sessions"
+        params: list = []
+
+        if search:
+            query += " WHERE topic LIKE ?"
+            params.append(f"%{search}%")
+
+        if sort == "oldest":
+            query += " ORDER BY created_at ASC"
+        elif sort == "status":
+            query += " ORDER BY status, created_at DESC"
+        else:  # newest
+            query += " ORDER BY created_at DESC"
+
+        query += " LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
+        cursor = await self.db.execute(query, params)
         rows = await cursor.fetchall()
         return [dict(r) for r in rows]
+
+    async def count_sessions(self, search: str = "") -> int:
+        """Count sessions with optional search filter."""
+        if search:
+            cursor = await self.db.execute(
+                "SELECT COUNT(*) FROM debate_sessions WHERE topic LIKE ?",
+                (f"%{search}%",),
+            )
+        else:
+            cursor = await self.db.execute("SELECT COUNT(*) FROM debate_sessions")
+        row = await cursor.fetchone()
+        return row[0] if row else 0
+
+    async def delete_session(self, session_id: str) -> bool:
+        """Delete a session and all its related data."""
+        # Delete messages first
+        await self.db.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+        # Delete rounds
+        await self.db.execute("DELETE FROM debate_rounds WHERE session_id = ?", (session_id,))
+        # Delete session
+        cursor = await self.db.execute("DELETE FROM debate_sessions WHERE id = ?", (session_id,))
+        await self.db.commit()
+        return cursor.rowcount > 0
 
     # ── Rounds ──
 

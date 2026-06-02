@@ -63,13 +63,19 @@ async def create_debate(
 
 
 @router.get("/debates")
-async def list_debates(limit: int = 20, offset: int = 0):
-    """List debate sessions."""
+async def list_debates(
+    limit: int = 20,
+    offset: int = 0,
+    search: str = "",
+    sort: str = "newest",
+):
+    """List debate sessions with optional search and sort."""
     db = await get_db()
     try:
         repo = DebateRepository(db)
-        sessions = await repo.list_sessions(limit=limit, offset=offset)
-        return {"debates": sessions, "count": len(sessions)}
+        sessions = await repo.list_sessions(limit=limit, offset=offset, search=search, sort=sort)
+        total = await repo.count_sessions(search=search)
+        return {"debates": sessions, "count": len(sessions), "total": total}
     finally:
         await db.close()
 
@@ -90,6 +96,25 @@ async def get_debate(session_id: str):
             "rounds": rounds,
             "messages": messages,
         }
+    finally:
+        await db.close()
+
+
+@router.delete("/debates/{session_id}")
+async def delete_debate(session_id: str):
+    """Delete a debate session and all its data."""
+    # Stop if running
+    engine = session_service.get_engine(session_id)
+    if engine and engine.session and engine.session.status == "running":
+        engine.stop()
+
+    db = await get_db()
+    try:
+        repo = DebateRepository(db)
+        deleted = await repo.delete_session(session_id)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Debate not found")
+        return {"deleted": True, "id": session_id}
     finally:
         await db.close()
 
